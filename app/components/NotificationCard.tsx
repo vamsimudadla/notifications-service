@@ -22,7 +22,7 @@ function NotificationCard({
       if (!nextId) return;
       onToggleRead(nextId);
     },
-    [onToggleRead]
+    [onToggleRead],
   );
 
   const handleDeleteClick = useCallback(
@@ -31,12 +31,12 @@ function NotificationCard({
       if (!nextId) return;
       onDelete(nextId);
     },
-    [onDelete]
+    [onDelete],
   );
 
   return (
     <li
-      className={`group flex items-start gap-4 px-4 py-4 sm:px-5 sm:py-4.5 ${
+      className={`flex items-start gap-4 px-4 py-4 sm:px-5 sm:py-4.5 ${
         notification.read ? "bg-transparent" : "bg-zinc-900"
       }`}
     >
