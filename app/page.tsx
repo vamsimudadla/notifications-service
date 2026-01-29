@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   type INotification,
   type IControls,
@@ -8,15 +8,15 @@ import {
   TYPE_FILTER,
 } from "./utils/types";
 import NotificationCard from "./components/NotificationCard";
-import { INITIAL_NOTIFICATIONS } from "./utils/constans";
 import Header from "./components/Header";
 import EmptyMessage from "./components/EmptyMessage";
 import Controls from "./components/Controls";
+import { fetchNotifications } from "./services/notifications.api";
+import { PAGE_LIMIT } from "./utils/constans";
 
 export default function Home() {
-  const [notifications, setNotifications] = useState<INotification[]>(
-    INITIAL_NOTIFICATIONS
-  );
+  const [notifications, setNotifications] = useState<INotification[]>([]);
+  const [hasMore, setHasMore] = useState(true);
   const [controls, setControls] = useState<IControls>({
     search: "",
     statusFilter: STATUS_FILTER.ALL,
@@ -37,7 +37,7 @@ export default function Home() {
 
   const unreadCount = useMemo(
     () => notifications.filter((n) => !n.read).length,
-    [notifications]
+    [notifications],
   );
 
   const filteredNotifications = useMemo(() => {
@@ -62,7 +62,7 @@ export default function Home() {
 
   const handleToggleRead = (id: string) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n))
+      prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n)),
     );
   };
 
@@ -73,6 +73,20 @@ export default function Home() {
   const handleMarkAllAsRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
+
+  const getNotifications = async (cursor?: string) => {
+    try {
+      const data = await fetchNotifications(cursor);
+      if (data?.length < PAGE_LIMIT) {
+        setHasMore(false);
+      }
+      setNotifications((prev) => [...prev, ...data]);
+    } catch (error) {}
+  };
+
+  useEffect(() => {
+    getNotifications();
+  }, []);
 
   return (
     <div className="flex min-h-screen justify-center bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 px-4 py-10 text-zinc-50">
