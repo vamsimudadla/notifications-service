@@ -11,10 +11,16 @@ import NotificationCard from "./components/NotificationCard";
 import Header from "./components/Header";
 import EmptyMessage from "./components/EmptyMessage";
 import Controls from "./components/Controls";
-import { fetchNotifications } from "./services/notifications.api";
+import {
+  deleteNotification,
+  fetchNotifications,
+  markAllAsRead,
+  markAsReadUnread,
+} from "./services/notifications.api";
 import { PAGE_LIMIT } from "./utils/constans";
 import useIntersectionObserver from "./hooks/IntersectionObserver";
 import Loader from "./components/Loader";
+import { useDebounce } from "./hooks/Debounce";
 
 export default function Home() {
   const [notifications, setNotifications] = useState<INotification[]>([]);
@@ -23,9 +29,12 @@ export default function Home() {
     statusFilter: STATUS_FILTER.ALL,
     typeFilter: TYPE_FILTER.ALL,
   });
+
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const paginationRef = useRef<HTMLDivElement | null>(null);
+
+  const debouncedSearch = useDebounce(controls.search, 300);
 
   const getNotifications = async (cursor?: string) => {
     try {
@@ -33,19 +42,25 @@ export default function Home() {
         return;
       }
       setLoadingNotifications(true);
-      const data = await fetchNotifications(cursor);
+      const data = await fetchNotifications(cursor, controls);
       if (data?.length < PAGE_LIMIT) {
         setHasMore(false);
       }
-      setNotifications((prev) => [...prev, ...data]);
+      setNotifications((prev) => (cursor ? [...prev, ...data] : data));
     } catch (error) {
     } finally {
       setLoadingNotifications(false);
     }
   };
 
+  useEffect(() => {
+    setNotifications([]);
+    setHasMore(true);
+    getNotifications();
+  }, [controls.typeFilter, controls.statusFilter, debouncedSearch]);
+
   const handleVisibilityChange = (id: string, isVisible: boolean) => {
-    if (isVisible) {
+    if (isVisible && notifications.length) {
       getNotifications(notifications[notifications.length - 1]?.created_at);
     }
   };
@@ -80,38 +95,31 @@ export default function Home() {
     [notifications],
   );
 
-  const filteredNotifications = useMemo(() => {
-    const { search, statusFilter, typeFilter } = controls;
-    return notifications.filter((n) => {
-      if (statusFilter === STATUS_FILTER.UNREAD && n.read) return false;
-      if (statusFilter === STATUS_FILTER.READ && !n.read) return false;
-      if (typeFilter !== TYPE_FILTER.ALL && n.type !== typeFilter) return false;
-
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        return (
-          n.title.toLowerCase().includes(q) ||
-          n.message.toLowerCase().includes(q) ||
-          (n.category && n.category.toLowerCase().includes(q))
+  const handleToggleRead = async (id: string) => {
+    try {
+      const notification = notifications.find((noti) => noti.id === id);
+      if (notification) {
+        const status = notification.read;
+        await markAsReadUnread(id, !status);
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, read: !status } : n)),
         );
       }
-
-      return true;
-    });
-  }, [notifications, controls]);
-
-  const handleToggleRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: !n.read } : n)),
-    );
+    } catch (error) {}
   };
 
-  const handleDelete = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteNotification(id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch (error) {}
   };
 
-  const handleMarkAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const handleMarkAllAsRead = async () => {
+    try {
+      await markAllAsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    } catch (error) {}
   };
 
   return (
@@ -129,7 +137,7 @@ export default function Home() {
         />
 
         <section className="flex-1 border border-zinc-800/80 bg-zinc-900/80">
-          {!hasMore && filteredNotifications.length === 0 ? (
+          {!hasMore && notifications.length === 0 ? (
             <EmptyMessage />
           ) : loadingNotifications && !notifications.length ? (
             <div className="flex items-center justify-center mt-4">
@@ -137,7 +145,7 @@ export default function Home() {
             </div>
           ) : (
             <ul className="divide-y divide-zinc-800/80">
-              {filteredNotifications.map((notification, index) => (
+              {notifications.map((notification) => (
                 <NotificationCard
                   key={notification.id}
                   notification={notification}

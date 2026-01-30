@@ -15,7 +15,7 @@ function statusPillClasses(active: boolean) {
     "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-medium transition-colors capitalize",
     active
       ? "bg-zinc-100 text-zinc-900 dark:bg-zinc-100 dark:text-zinc-900"
-      : "bg-transparent text-zinc-500 hover:bg-zinc-100/60 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/80 dark:hover:text-zinc-100",
+      : "bg-transparent text-zinc-500 hover:bg-zinc-100/60 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/80 dark:hover:text-zinc-100 cursor-pointer",
   ].join(" ");
 }
 
@@ -35,7 +35,7 @@ function Controls({
       if (!next) return;
       updateStatusFilter(next);
     },
-    [updateStatusFilter]
+    [updateStatusFilter],
   );
 
   return (
@@ -89,7 +89,7 @@ function Controls({
           type="button"
           onClick={handleMarkAllAsRead}
           disabled={unreadCount === 0}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-600/40 bg-emerald-600/15 px-3 py-1.5 text-xs font-medium text-emerald-300 outline-none ring-0 ring-emerald-500/50 transition hover:border-emerald-500/70 hover:bg-emerald-500/20 hover:text-emerald-100 disabled:border-zinc-700 disabled:bg-zinc-800/60 disabled:text-zinc-500"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-600/40 bg-emerald-600/15 px-3 py-1.5 text-xs font-medium text-emerald-300 outline-none ring-0 ring-emerald-500/50 transition cursor-pointer hover:border-emerald-500/70 hover:bg-emerald-500/20 hover:text-emerald-100 disabled:border-zinc-700 disabled:bg-zinc-800/60 disabled:text-zinc-500 disabled:cursor-not-allowed"
         >
           <span>Mark all as read</span>
         </button>

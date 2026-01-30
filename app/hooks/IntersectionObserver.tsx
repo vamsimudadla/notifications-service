@@ -71,15 +71,12 @@ const useIntersectionObserver = ({
     [debounceDelay],
   );
 
-  useEffect(() => {
-    if (typeof IntersectionObserver === "undefined") {
-      console.warn("IntersectionObserver is not supported in this browser");
-      return cleanup;
-    }
+  const createObserver = useCallback(() => {
+    if (observerRef.current) return;
 
     observerRef.current = new IntersectionObserver(
-      (entries: IntersectionObserverEntry[]) => {
-        entries.forEach((entry: IntersectionObserverEntry) => {
+      (entries) => {
+        entries.forEach((entry) => {
           const element = entry.target;
           const itemId = observedElements.current.get(element);
 
@@ -87,11 +84,9 @@ const useIntersectionObserver = ({
 
           const wasVisible = visibilityCache.current.get(itemId) || false;
           const isVisible = entry.isIntersecting;
-          console.log("intersecting", entry.isIntersecting);
 
           if (wasVisible !== isVisible) {
             visibilityCache.current.set(itemId, isVisible);
-
             handleVisibilityChange(itemId, isVisible, entry);
           }
         });
@@ -103,12 +98,28 @@ const useIntersectionObserver = ({
         ...options,
       },
     );
+  }, [handleVisibilityChange, options]);
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") {
+      console.warn("IntersectionObserver is not supported in this browser");
+      return cleanup;
+    }
+
+    createObserver();
 
     return cleanup;
   }, []);
 
   const observe = useCallback((element: Element, itemId: string) => {
-    if (!element || !observerRef.current || !itemId) return;
+    if (!element || !itemId) return;
+
+    // 👇 recreate observer if disconnected
+    if (!observerRef.current) {
+      createObserver();
+    }
+
+    if (!observerRef.current) return;
 
     observedElements.current.set(element, itemId);
 

@@ -1,9 +1,15 @@
 import { supabase } from "../clients/supabase";
 import { PAGE_LIMIT } from "../utils/constans";
-import { INotification } from "../utils/types";
+import {
+  IControls,
+  INotification,
+  STATUS_FILTER,
+  TYPE_FILTER,
+} from "../utils/types";
 
 export async function fetchNotifications(
-  cursor?: string, // Pass the last notification's created_at or id
+  cursor?: string, // created_at cursor
+  filters?: IControls,
   pageSize = PAGE_LIMIT,
   direction: "forward" | "backward" = "forward",
 ): Promise<INotification[]> {
@@ -23,6 +29,25 @@ export async function fetchNotifications(
     }
   }
 
+  // 🔍 Search (title + message)
+  if (filters?.search?.trim()) {
+    const text = filters.search.trim();
+    query = query.or(`title.ilike.%${text}%,message.ilike.%${text}%`);
+  }
+
+  // ✅ Read / Unread filter
+  if (
+    filters?.statusFilter === STATUS_FILTER.READ ||
+    filters?.statusFilter === STATUS_FILTER.UNREAD
+  ) {
+    query = query.eq("read", filters?.statusFilter === STATUS_FILTER.READ);
+  }
+
+  // 🏷️ Type filter
+  if (filters?.typeFilter && filters.typeFilter !== TYPE_FILTER.ALL) {
+    query = query.eq("type", filters.typeFilter);
+  }
+
   query = query.limit(pageSize);
 
   const { data, error } = await query;
@@ -31,10 +56,10 @@ export async function fetchNotifications(
   return data ?? [];
 }
 
-export async function markAsRead(id: string) {
+export async function markAsReadUnread(id: string, read: boolean) {
   const { error } = await supabase
     .from("notifications")
-    .update({ read: true })
+    .update({ read: read })
     .eq("id", id);
 
   if (error) throw error;
@@ -42,6 +67,15 @@ export async function markAsRead(id: string) {
 
 export async function deleteNotification(id: string) {
   const { error } = await supabase.from("notifications").delete().eq("id", id);
+
+  if (error) throw error;
+}
+
+export async function markAllAsRead() {
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read: true })
+    .eq("read", false);
 
   if (error) throw error;
 }
