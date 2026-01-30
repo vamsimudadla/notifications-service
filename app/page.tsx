@@ -24,7 +24,10 @@ import { PAGE_LIMIT } from "./utils/constans";
 import useIntersectionObserver from "./hooks/IntersectionObserver";
 import Loader from "./components/Loader";
 import { useDebounce } from "./hooks/Debounce";
-import { generateRandomNotification } from "./utils/methods";
+import {
+  doesNotificationMatchFilters,
+  generateRandomNotification,
+} from "./utils/methods";
 
 export default function Home() {
   const [notifications, setNotifications] = useState<INotification[]>([]);
@@ -70,45 +73,7 @@ export default function Home() {
     setHasMore(true);
     getNotifications();
     getUnreadCount();
-  }, [controls.typeFilter, controls.statusFilter, debouncedSearch]);
 
-  function doesNotificationMatchFilters(
-    notification: INotification,
-    filters?: IControls,
-  ): boolean {
-    // 🔍 Search filter (title + message)
-    if (filters?.search?.trim()) {
-      const text = filters.search.trim().toLowerCase();
-
-      const matchesSearch =
-        notification.title.toLowerCase().includes(text) ||
-        notification.message.toLowerCase().includes(text);
-
-      if (!matchesSearch) return false;
-    }
-
-    // ✅ Read / Unread filter
-    if (filters?.statusFilter === STATUS_FILTER.READ && !notification.read) {
-      return false;
-    }
-
-    if (filters?.statusFilter === STATUS_FILTER.UNREAD && notification.read) {
-      return false;
-    }
-
-    // 🏷️ Type filter (single)
-    if (
-      filters?.typeFilter &&
-      filters.typeFilter !== TYPE_FILTER.ALL &&
-      notification.type !== filters.typeFilter
-    ) {
-      return false;
-    }
-
-    return true;
-  }
-
-  useEffect(() => {
     const unsubscribe = subscribeToNewNotifications((notification) => {
       if (doesNotificationMatchFilters(notification, controls)) {
         setNotifications((prev) => [{ ...notification }, ...prev]);
@@ -117,7 +82,7 @@ export default function Home() {
     });
 
     return unsubscribe;
-  }, []);
+  }, [controls.typeFilter, controls.statusFilter, debouncedSearch]);
 
   const handleVisibilityChange = (id: string, isVisible: boolean) => {
     if (isVisible && notifications.length) {

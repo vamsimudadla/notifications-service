@@ -1,4 +1,4 @@
-import { INotification, TYPE_FILTER } from "./types";
+import { IControls, INotification, STATUS_FILTER, TYPE_FILTER } from "./types";
 
 export function getRelativeTime(isoDate: string) {
   const date = new Date(isoDate);
@@ -63,4 +63,40 @@ export function generateRandomNotification(): Omit<
     type,
     read: Math.random() < 0.3, // ~30% read
   };
+}
+
+export function doesNotificationMatchFilters(
+  notification: INotification,
+  filters?: IControls,
+): boolean {
+  // 🔍 Search filter (title + message)
+  if (filters?.search?.trim()) {
+    const text = filters.search.trim().toLowerCase();
+
+    const matchesSearch =
+      notification.title.toLowerCase().includes(text) ||
+      notification.message.toLowerCase().includes(text);
+
+    if (!matchesSearch) return false;
+  }
+
+  // ✅ Read / Unread filter
+  if (filters?.statusFilter === STATUS_FILTER.READ && !notification.read) {
+    return false;
+  }
+
+  if (filters?.statusFilter === STATUS_FILTER.UNREAD && notification.read) {
+    return false;
+  }
+
+  // 🏷️ Type filter (single)
+  if (
+    filters?.typeFilter &&
+    filters.typeFilter !== TYPE_FILTER.ALL &&
+    notification.type !== filters.typeFilter
+  ) {
+    return false;
+  }
+
+  return true;
 }
