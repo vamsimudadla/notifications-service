@@ -30,6 +30,7 @@ import {
 } from "./utils/methods";
 import { ErrorBoundary } from "react-error-boundary";
 import { ErrorFallback } from "./components/ErrorFallback";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function Home() {
   const [notifications, setNotifications] = useState<INotification[]>([]);
@@ -58,6 +59,7 @@ export default function Home() {
       }
       setNotifications((prev) => (cursor ? [...prev, ...data] : data));
     } catch (error) {
+      toast.error("Something went wrong! Please try again later");
     } finally {
       setLoadingNotifications(false);
     }
@@ -128,7 +130,9 @@ export default function Home() {
         );
         setUnreadCount((prev) => (status ? prev + 1 : Math.max(prev - 1, 0)));
       }
-    } catch (error) {}
+    } catch (error) {
+      toast.error("Failed to mark as read/unread");
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -139,7 +143,9 @@ export default function Home() {
         setUnreadCount((prev) => Math.max(prev - 1, 0));
       }
       setNotifications((prev) => prev.filter((n) => n.id !== id));
-    } catch (error) {}
+    } catch (error) {
+      toast.error("Failed to delete notification");
+    }
   };
 
   const handleMarkAllAsRead = async () => {
@@ -147,17 +153,22 @@ export default function Home() {
       await markAllAsRead(controls);
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
-    } catch (error) {}
+    } catch (error) {
+      toast.error("Failed to mark all as read");
+    }
   };
 
   const sendNewNotification = async () => {
     try {
       addNotification(generateRandomNotification());
-    } catch (error) {}
+    } catch (error) {
+      toast.error("Failed to send notification");
+    }
   };
 
   return (
     <ErrorBoundary fallback={<ErrorFallback />}>
+      <Toaster />
       <div className="flex min-h-screen justify-center bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 px-4 py-10 text-zinc-50">
         <main className="flex w-full max-w-5xl flex-col gap-6 rounded-3xl border border-zinc-800/80 bg-zinc-950/80 p-6 shadow-[0_18px_80px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:p-8">
           <Header sendNotification={sendNewNotification} />
