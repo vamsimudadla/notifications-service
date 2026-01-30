@@ -56,6 +56,29 @@ export async function fetchNotifications(
   return data ?? [];
 }
 
+export async function fetchUnreadCountWithFilters(
+  filters?: IControls,
+): Promise<number> {
+  let query = supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("read", false);
+
+  if (filters?.search?.trim()) {
+    const text = filters.search.trim();
+    query = query.or(`title.ilike.%${text}%,message.ilike.%${text}%`);
+  }
+
+  if (filters?.typeFilter && filters.typeFilter !== TYPE_FILTER.ALL) {
+    query = query.eq("type", filters.typeFilter);
+  }
+
+  const { count, error } = await query;
+
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function markAsReadUnread(id: string, read: boolean) {
   const { error } = await supabase
     .from("notifications")
@@ -71,11 +94,27 @@ export async function deleteNotification(id: string) {
   if (error) throw error;
 }
 
-export async function markAllAsRead() {
-  const { error } = await supabase
+export async function markAllAsRead(filters?: IControls): Promise<void> {
+  let query = supabase
     .from("notifications")
     .update({ read: true })
-    .eq("read", false);
+    .eq("read", false); // only unread
+
+  // 🔍 Search (title + message)
+  if (filters?.search?.trim()) {
+    const text = filters.search.trim();
+    query = query.or(`title.ilike.%${text}%,message.ilike.%${text}%`);
+  }
+
+  // 🏷️ Type filter
+  if (filters?.typeFilter && filters.typeFilter !== TYPE_FILTER.ALL) {
+    query = query.eq("type", filters.typeFilter);
+  }
+
+  // ⚠️ statusFilter is intentionally ignored
+  // If statusFilter === READ, there is nothing to update
+
+  const { error } = await query;
 
   if (error) throw error;
 }

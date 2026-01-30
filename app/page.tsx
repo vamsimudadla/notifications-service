@@ -14,6 +14,7 @@ import Controls from "./components/Controls";
 import {
   deleteNotification,
   fetchNotifications,
+  fetchUnreadCountWithFilters,
   markAllAsRead,
   markAsReadUnread,
 } from "./services/notifications.api";
@@ -24,6 +25,7 @@ import { useDebounce } from "./hooks/Debounce";
 
 export default function Home() {
   const [notifications, setNotifications] = useState<INotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [controls, setControls] = useState<IControls>({
     search: "",
     statusFilter: STATUS_FILTER.ALL,
@@ -53,10 +55,18 @@ export default function Home() {
     }
   };
 
+  const getUnreadCount = async () => {
+    try {
+      const count = await fetchUnreadCountWithFilters(controls);
+      setUnreadCount(count);
+    } catch (error) {}
+  };
+
   useEffect(() => {
     setNotifications([]);
     setHasMore(true);
     getNotifications();
+    getUnreadCount();
   }, [controls.typeFilter, controls.statusFilter, debouncedSearch]);
 
   const handleVisibilityChange = (id: string, isVisible: boolean) => {
@@ -90,11 +100,6 @@ export default function Home() {
     setControls((prev) => ({ ...prev, typeFilter }));
   }, []);
 
-  const unreadCount = useMemo(
-    () => notifications.filter((n) => !n.read).length,
-    [notifications],
-  );
-
   const handleToggleRead = async (id: string) => {
     try {
       const notification = notifications.find((noti) => noti.id === id);
@@ -104,6 +109,7 @@ export default function Home() {
         setNotifications((prev) =>
           prev.map((n) => (n.id === id ? { ...n, read: !status } : n)),
         );
+        setUnreadCount((prev) => (status ? prev + 1 : Math.max(prev - 1, 0)));
       }
     } catch (error) {}
   };
@@ -117,8 +123,9 @@ export default function Home() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      await markAllAsRead();
+      await markAllAsRead(controls);
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
     } catch (error) {}
   };
 
