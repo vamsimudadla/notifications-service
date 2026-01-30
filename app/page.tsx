@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   type INotification,
   type IControls,
@@ -12,16 +12,19 @@ import Header from "./components/Header";
 import EmptyMessage from "./components/EmptyMessage";
 import Controls from "./components/Controls";
 import {
+  addNotification,
   deleteNotification,
   fetchNotifications,
   fetchUnreadCountWithFilters,
   markAllAsRead,
   markAsReadUnread,
+  subscribeToNewNotifications,
 } from "./services/notifications.api";
 import { PAGE_LIMIT } from "./utils/constans";
 import useIntersectionObserver from "./hooks/IntersectionObserver";
 import Loader from "./components/Loader";
 import { useDebounce } from "./hooks/Debounce";
+import { generateRandomNotification } from "./utils/methods";
 
 export default function Home() {
   const [notifications, setNotifications] = useState<INotification[]>([]);
@@ -68,6 +71,53 @@ export default function Home() {
     getNotifications();
     getUnreadCount();
   }, [controls.typeFilter, controls.statusFilter, debouncedSearch]);
+
+  function doesNotificationMatchFilters(
+    notification: INotification,
+    filters?: IControls,
+  ): boolean {
+    // 🔍 Search filter (title + message)
+    if (filters?.search?.trim()) {
+      const text = filters.search.trim().toLowerCase();
+
+      const matchesSearch =
+        notification.title.toLowerCase().includes(text) ||
+        notification.message.toLowerCase().includes(text);
+
+      if (!matchesSearch) return false;
+    }
+
+    // ✅ Read / Unread filter
+    if (filters?.statusFilter === STATUS_FILTER.READ && !notification.read) {
+      return false;
+    }
+
+    if (filters?.statusFilter === STATUS_FILTER.UNREAD && notification.read) {
+      return false;
+    }
+
+    // 🏷️ Type filter (single)
+    if (
+      filters?.typeFilter &&
+      filters.typeFilter !== TYPE_FILTER.ALL &&
+      notification.type !== filters.typeFilter
+    ) {
+      return false;
+    }
+
+    return true;
+  }
+
+  useEffect(() => {
+    const unsubscribe = subscribeToNewNotifications((notification) => {
+      if (doesNotificationMatchFilters(notification, controls)) {
+        setNotifications((prev) => [{ ...notification }, ...prev]);
+        setUnreadCount((prev) => prev + 1);
+      }
+    });
+
+    return unsubscribe;
+  }, []);
 
   const handleVisibilityChange = (id: string, isVisible: boolean) => {
     if (isVisible && notifications.length) {
@@ -133,10 +183,16 @@ export default function Home() {
     } catch (error) {}
   };
 
+  const sendNewNotification = async () => {
+    try {
+      addNotification(generateRandomNotification());
+    } catch (error) {}
+  };
+
   return (
     <div className="flex min-h-screen justify-center bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 px-4 py-10 text-zinc-50">
       <main className="flex w-full max-w-5xl flex-col gap-6 rounded-3xl border border-zinc-800/80 bg-zinc-950/80 p-6 shadow-[0_18px_80px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:p-8">
-        <Header />
+        <Header sendNotification={sendNewNotification} />
 
         <Controls
           unreadCount={unreadCount}

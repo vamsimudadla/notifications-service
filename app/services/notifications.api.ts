@@ -118,3 +118,37 @@ export async function markAllAsRead(filters?: IControls): Promise<void> {
 
   if (error) throw error;
 }
+
+export async function addNotification(
+  notification: Omit<INotification, "id" | "created_at">,
+) {
+  const { error } = await supabase.from("notifications").insert({
+    ...notification,
+    read: false,
+  });
+
+  if (error) throw error;
+}
+
+export function subscribeToNewNotifications(
+  onNewNotification: (notification: INotification) => void,
+) {
+  const channel = supabase
+    .channel("notifications-insert")
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "notifications",
+      },
+      (payload) => {
+        onNewNotification(payload.new as INotification);
+      },
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}
