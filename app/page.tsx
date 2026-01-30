@@ -28,6 +28,8 @@ import {
   doesNotificationMatchFilters,
   generateRandomNotification,
 } from "./utils/methods";
+import { ErrorBoundary } from "react-error-boundary";
+import { ErrorFallback } from "./components/ErrorFallback";
 
 export default function Home() {
   const [notifications, setNotifications] = useState<INotification[]>([]);
@@ -155,42 +157,44 @@ export default function Home() {
   };
 
   return (
-    <div className="flex min-h-screen justify-center bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 px-4 py-10 text-zinc-50">
-      <main className="flex w-full max-w-5xl flex-col gap-6 rounded-3xl border border-zinc-800/80 bg-zinc-950/80 p-6 shadow-[0_18px_80px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:p-8">
-        <Header sendNotification={sendNewNotification} />
+    <ErrorBoundary fallback={<ErrorFallback />}>
+      <div className="flex min-h-screen justify-center bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 px-4 py-10 text-zinc-50">
+        <main className="flex w-full max-w-5xl flex-col gap-6 rounded-3xl border border-zinc-800/80 bg-zinc-950/80 p-6 shadow-[0_18px_80px_rgba(0,0,0,0.7)] backdrop-blur-xl sm:p-8">
+          <Header sendNotification={sendNewNotification} />
 
-        <Controls
-          unreadCount={unreadCount}
-          controls={controls}
-          updateSearch={updateSearch}
-          updateStatusFilter={updateStatusFilter}
-          updateTypeFilter={updateTypeFilter}
-          handleMarkAllAsRead={handleMarkAllAsRead}
-        />
+          <Controls
+            unreadCount={unreadCount}
+            controls={controls}
+            updateSearch={updateSearch}
+            updateStatusFilter={updateStatusFilter}
+            updateTypeFilter={updateTypeFilter}
+            handleMarkAllAsRead={handleMarkAllAsRead}
+          />
 
-        <section className="flex-1 border border-zinc-800/80 bg-zinc-900/80">
-          {!hasMore && notifications.length === 0 ? (
-            <EmptyMessage />
-          ) : loadingNotifications && !notifications.length ? (
-            <div className="flex items-center justify-center mt-4">
-              <Loader />
-            </div>
-          ) : (
-            <ul className="divide-y divide-zinc-800/80">
-              {notifications.map((notification) => (
-                <NotificationCard
-                  key={notification.id}
-                  notification={notification}
-                  onToggleRead={handleToggleRead}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </ul>
-          )}
-        </section>
-        {notifications.length && loadingNotifications ? <Loader /> : null}
-        {hasMore && <div ref={paginationRef} className="flex"></div>}
-      </main>
-    </div>
+          <section className="flex-1 border border-zinc-800/80 bg-zinc-900/80">
+            {!hasMore && notifications.length === 0 ? (
+              <EmptyMessage />
+            ) : loadingNotifications && !notifications.length ? (
+              <div className="flex items-center justify-center mt-4">
+                <Loader />
+              </div>
+            ) : (
+              <ul className="divide-y divide-zinc-800/80">
+                {notifications.map((notification) => (
+                  <NotificationCard
+                    key={notification.id}
+                    notification={notification}
+                    onToggleRead={handleToggleRead}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </ul>
+            )}
+          </section>
+          {notifications.length && loadingNotifications ? <Loader /> : null}
+          {hasMore && <div ref={paginationRef} className="flex"></div>}
+        </main>
+      </div>
+    </ErrorBoundary>
   );
 }
