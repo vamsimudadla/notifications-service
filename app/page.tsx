@@ -117,6 +117,10 @@ export default function Home() {
   const handleDelete = async (id: string) => {
     try {
       await deleteNotification(id);
+      const notification = notifications.find((noti) => noti.id === id);
+      if (notification && !notification.read) {
+        setUnreadCount((prev) => Math.max(prev - 1, 0));
+      }
       setNotifications((prev) => prev.filter((n) => n.id !== id));
     } catch (error) {}
   };
